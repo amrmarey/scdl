@@ -4,10 +4,8 @@ FROM python:3.9-slim
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
-COPY ./requirements.txt /app
-COPY ./index.html /app
-COPY ./server.py /app
+# Copy the requirements file first to leverage Docker cache
+COPY ./requirements.txt /app/requirements.txt
 
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
@@ -15,14 +13,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install FFmpeg
 RUN apt-get update && apt-get install -y ffmpeg
 
+# Copy only the necessary files into the container
+COPY ./server.py /app/server.py
+COPY ./index.html /app/index.html
+
 # Make port 5000 available to the world outside this container
 EXPOSE 5000
-
-# Create Download folder to support download 
-RUN mkdir -p /app/downloads && chmod -R 777 /app/downloads
 
 # Define environment variable
 ENV NAME World
 
-# Run app.py when the container launches
+# Run server.py when the container launches
 CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "5000", "--reload"]

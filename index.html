@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoundCloud Downloader</title>
+    <style>
+        /* Reset some basic elements */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #333;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #ff5500;
+        }
+
+        .container {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2em;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            transition: border 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: #ff5500;
+            outline: none;
+        }
+
+        button {
+            background-color: #ff5500;
+            color: #fff;
+            padding: 15px 20px;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        button:hover {
+            background-color: #e14a00;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        #progress {
+            display: none;
+            margin-top: 20px;
+            font-size: 1.1em;
+            color: #ff5500;
+        }
+
+        #progress-text {
+            font-weight: bold;
+        }
+
+        #loading-spinner {
+            margin-left: 10px;
+            display: none;
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #ff5500;
+            width: 15px;
+            height: 15px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SoundCloud Downloader</h1>
+        <form id="download-form">
+            <input type="text" id="url" placeholder="Enter SoundCloud URL" required aria-label="Enter SoundCloud URL">
+            <button type="submit" id="download-button">
+                Download
+                <div id="loading-spinner"></div>
+            </button>
+        </form>
+        <div id="progress" aria-live="polite">
+            <p id="progress-text">Initializing...</p>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('download-form');
+        const progressDiv = document.getElementById('progress');
+        const progressText = document.getElementById('progress-text');
+        const downloadButton = document.getElementById('download-button');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const urlInput = document.getElementById('url');
+
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const url = urlInput.value.trim();
+            if (url) {
+                // Show progress and disable button
+                progressDiv.style.display = 'block';
+                progressText.textContent = 'Fetching SoundCloud URL...';
+                downloadButton.disabled = true;
+                loadingSpinner.style.display = 'inline-block';
+
+                fetch(`/download?url=${encodeURIComponent(url)}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        const disposition = response.headers.get('Content-Disposition');
+                        const filename = disposition ? decodeURIComponent(disposition.split('filename*=UTF-8\'\'')[1]) : 'download.mp3';
+                        return response.blob().then(blob => ({ blob, filename }));
+                    })
+                    .then(({ blob, filename }) => {
+                        progressText.textContent = 'Download complete!';
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                        progressDiv.style.display = 'none';
+                        urlInput.value = ''; // Clear input field
+                    })
+                    .catch(error => {
+                        progressText.textContent = `Error: ${error.message}`;
+                    })
+                    .finally(() => {
+                        // Re-enable button and hide loading spinner
+                        downloadButton.disabled = false;
+                        loadingSpinner.style.display = 'none';
+                    });
+            }
+        });
+    </script>
+</body>
+</html>

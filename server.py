@@ -6,6 +6,7 @@ import logging
 import urllib.parse
 import tempfile
 import shutil
+from starlette.background import BackgroundTask
 
 app = FastAPI()
 
@@ -49,24 +50,22 @@ async def download(url: str):
         utf8_filename = os.path.basename(filename)
         encoded_filename = urllib.parse.quote(utf8_filename)
 
-        # Serve the file
-        response = FileResponse(
+        # Create a background task to delete the file after it's been served
+        def cleanup():
+            os.remove(filename)
+            shutil.rmtree(temp_dir)
+            logging.info(f"Deleted file: {filename} and cleaned up directory: {temp_dir}")
+
+        # Serve the file with a background task to clean up
+        return FileResponse(
             path=filename,
             media_type='audio/mpeg',
             filename=utf8_filename,
             headers={
                 'Content-Disposition': f'attachment; filename*=UTF-8\'\'{encoded_filename}'
-            }
+            },
+            background=BackgroundTask(cleanup)
         )
-
-        # Add a callback to delete the file after the response has been sent
-        @response.background
-        async def cleanup():
-            os.remove(filename)
-            shutil.rmtree(temp_dir)
-            logging.info(f"Deleted file: {filename} and cleaned up directory: {temp_dir}")
-
-        return response
 
     except Exception as e:
         logging.error(f"Error downloading or serving file: {e}")

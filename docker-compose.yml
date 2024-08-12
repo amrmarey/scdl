@@ -1,11 +1,37 @@
-version: '3'
+version: '3.8'
 
 services:
   web:
     build: .
     ports:
       - "5000:5000"
-    #volumes:
-    #  - .:/app
     environment:
-      - FLASK_ENV=development
+      - HOST=0.0.0.0
+      - PORT=5000
+    restart: unless-stopped
+    networks:
+      - webnet
+    security_opt:
+      - no-new-privileges:true  # Prevents privilege escalation
+    cap_drop:
+      - ALL  # Drop all Linux capabilities
+    read_only: true  # Set the entire filesystem to read-only
+    tmpfs:
+      - /run  # Use a tmpfs filesystem for /run to prevent tampering
+      - /tmp  # Use a tmpfs filesystem for /tmp to prevent tampering
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    user: "1000:1000"  # Run as non-root user
+
+networks:
+  webnet:
+    driver: bridge

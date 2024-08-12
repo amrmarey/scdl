@@ -18,6 +18,9 @@ RUN apt-get update && apt-get install -y ffmpeg
 # Make port 5000 available to the world outside this container
 EXPOSE 5000
 
+# Create Download folder to support download 
+RUN mkdir -p /app/downloads && chmod -R 777 /app/downloads
+
 # Define environment variable
 ENV NAME World
 
